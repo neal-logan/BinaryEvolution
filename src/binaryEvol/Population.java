@@ -7,11 +7,10 @@ import java.util.Random;
 public class Population {
 
     public BitSet[] population; //solutions
-    public String s = ""; //The short string
-    public String t = ""; //The long string
+    public String shortString = "";
+    public String longString = ""; 
     Random random = new Random(System.currentTimeMillis());
     public int generation = 0;
-    public int feasibilityPenalty = 1; //Penalty for infeasible solutions, increase over time
 
     //Shuffles the solution BitSets in the pop[] (population) array
     public void shuffle() {
@@ -109,20 +108,75 @@ public class Population {
         }
     }
 
-    //TODO: Optimize; make variants?
-    public double getFitness(BitSet solution, String s, String t) {
+    public int simpleFitness(BitSet solution) {    
+        if(isFeasible(solution)) {
+            return solution.cardinality();
+        } else {
+            //Maybe make the infeasibility penalty increase with generation?
+            return solution.cardinality()/2; 
+        }
+    }
+    
+    //TODO: Optimize
+    public boolean isFeasible(BitSet solution) {
         String sequence = "";
         for (int i = 0; i < solution.length(); i++) {
             if(solution.get(i)) {
-                sequence += s.charAt(i) + "";
+                sequence += shortString.charAt(i) + "";
             }
         }
         
-        for(int i = 0; i < sequence.length(); i++) {
-            
+        int seqIt = 0;
+        int longStringIt = 0;
+        
+        while(seqIt < sequence.length() 
+                && longStringIt < longString.length()) {
+            char currentChar = sequence.charAt(seqIt);
+            boolean foundMatch = false;
+            while(longStringIt < longString.length()
+                    && !foundMatch) {
+                if(currentChar == longString.charAt(longStringIt)) {
+                    foundMatch = true;
+                }
+                longStringIt++;
+            }
+            if(foundMatch) seqIt++;
         }
+        //If the sequence iterator reaches the end, all characters in the 
+        //sequence were successfully matched
+        if (seqIt < sequence.length()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
+    
+    //Runs one generation
+    public void run() {
+        
+        //Kill some infeasibles
+        
+        
+        //Clone high-quality feasibles to replace genocided infeasibles
+        
+        
+        //Crossover
+        
+        
+        //Mutate
+
         
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
