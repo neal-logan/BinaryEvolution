@@ -1,5 +1,7 @@
 package binaryEvol;
 
+import java.util.BitSet;
+
 /**
  *
  * @author neal
@@ -16,25 +18,27 @@ public class Assessment {
     private boolean feasible = false;
 
     /*
-    -Higher complexity, probably don't want to use these every time
-    -Roughly O(n^2) with searchRange; 5-7 should be reasonable
-    -Much more intensive than cardinality fitness
-    
+    -Roughly O(n^2) with searchRange when infeasible
     -searchRange is the distance from initial iterator positions to search
     calculated as the sum of the distances from each iterator
+    -search range of 3-12 should be fine
+    -search range must be at least 2
      */
-    public Assessment(Population population, String solution, int searchRange) {
+    //TODO: Add option to skip feasibility check?
+    public Assessment(Population population, int solutionIndex) {
         this.population = population;
-        this.searchRange = searchRange;
-        this.solution = solution;
+        this.searchRange = population.getSearchRange();
+        this.solution = population.getSolutionAsString(solutionIndex);
 
         //Feasibility check
         if (population.isFeasible(solution)) {
             matches = solution.length();
             longStringSkips = longString.length() - solution.length();
             feasible = true;
-            
-        //If not feasible, do fuzzy assessment
+
+            //If not feasible, do fuzzy assessment          
+            //-Higher complexity, probably don't want to use these every time
+            //-Much more intensive than cardinality fitness
         } else {
             double sequenceLengthRatio = solution.length() / (double) longString.length();
             int solutionIterator = 0, longStringIterator = 0;
@@ -77,15 +81,15 @@ public class Assessment {
                         //Iterate; skip more of the sequence which has been skipped less relative to overall lengths
                         double skipRatio = solutionSkips / (double) longStringSkips;
                         if (skipRatio > sequenceLengthRatio) {
-                            longStringIterator += searchRange;
-                            longStringSkips += searchRange;
+                            longStringIterator += searchRange - 1;
+                            longStringSkips += searchRange - 1;
                             solutionIterator++;
                             solutionSkips++;
                         } else {
-                            longStringIterator++;
-                            longStringSkips++;
-                            solutionIterator += searchRange;
-                            solutionSkips += searchRange;
+                            longStringIterator+= searchRange/2;
+                            longStringSkips+= searchRange/2;
+                            solutionIterator += 1 + searchRange/2;
+                            solutionSkips += 1 + searchRange/2;
                         }
                     }
                 }
@@ -98,7 +102,7 @@ public class Assessment {
 
     }
 
-    public double getSimpleFitness() {
+    public double getSimpleFuzzyFitness() {
         if (feasible) {
             return solution.length();
         } else {
@@ -106,6 +110,24 @@ public class Assessment {
         }
     }
 
+    public double getPowerFuzzyFitness(double power) {
+        if(feasible) {
+            return Math.pow(solution.length(), power);
+        } else {
+            return Math.pow(matches, power) - Math.pow(solutionSkips, power);
+        }
+    }
+    
+    public double getEscalatingPowerFuzzyFitness(double power) {
+        power = power * (1.0 + (double) population.getGeneration() / population.getEpochLength());
+        if(feasible) {
+            return Math.pow(solution.length(), power);
+        } else {
+            return Math.pow(matches, power) - Math.pow(solutionSkips, power);
+        }
+    }
+    
+    
     //Character mismatch penalty increases steadily with generation
     public double getFitnessEscalatingPenalties() {
         if (feasible) {
@@ -114,6 +136,24 @@ public class Assessment {
             return matches - (solutionSkips * (1.0 + population.getGeneration()) / population.getEpochLength());
         }
     }
+    
+    public double getEscalatingPowerMildFeasibilityCardinalityFitness(double power) {
+        power = power * (1.0 + (double) population.getGeneration() / population.getEpochLength());
+        if(feasible) {
+            return Math.pow(this.solution.length(), power);
+        } else {
+            return Math.pow(matches, power) - Math.pow(solutionSkips, power);
+        }
+    }
+    
+    public int getHarshFeasibilityCardinalityFitness() {
+        if (feasible) {
+            return solution.length();
+        } else {
+            return 0;
+        }
+    }    
+ 
     
     
     
