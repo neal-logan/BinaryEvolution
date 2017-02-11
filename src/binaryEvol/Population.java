@@ -6,19 +6,42 @@ import java.util.Random;
 
 public class Population {
 
-    public BitSet[] population; //solutions
-    public String shortString = "";
-    public String longString = ""; 
-    Random random = new Random(System.currentTimeMillis());
-    public int generation = 0;
+    
 
+    private BitSet[] population; //solutions
+    private String shortString = "";
+    private String longString = "";
+    private int generation = 0;
+    private int epochLength = 0;
+    Random random = new Random(System.currentTimeMillis());
+
+    public BitSet[] getPopulation() {
+        return population;
+    }
+
+    public String getShortString() {
+        return shortString;
+    }
+
+    public String getLongString() {
+        return longString;
+    }
+
+    public int getGeneration() {
+        return generation;
+    }
+
+    public int getEpochLength() {
+        return epochLength;
+    }
+    
     //Shuffles the solution BitSets in the pop[] (population) array
     public void shuffle() {
         int rand;
-        for (int i = 0; i < population.length; i++) {
-            rand = random.nextInt(population.length);
-            BitSet temp = population[i];
-            population[i] = population[rand];
+        for (int i = 0; i < getPopulation().length; i++) {
+            rand = random.nextInt(getPopulation().length);
+            BitSet temp = getPopulation()[i];
+            population[i] = getPopulation()[rand];
             population[rand] = temp;
         }
     }
@@ -34,7 +57,7 @@ public class Population {
 
     //Fraction of bits in each solution to mutate
     public void mutate(double bitMutationRate) {
-        for (BitSet solution : population) {
+        for (BitSet solution : getPopulation()) {
             for (int i = 0; i < solution.length(); i++) {
                 if (random.nextDouble() < bitMutationRate) {
                     solution.flip(i);
@@ -48,7 +71,7 @@ public class Population {
     //flipped bits into account
     public void mutateVariableLength(double bitMutationRate, int maxFlippedBits) {
         bitMutationRate /= ((1 + maxFlippedBits) / 2.0); //Correcting for higher rate of flipped bits
-        for (BitSet solution : population) {
+        for (BitSet solution : getPopulation()) {
             for (int i = 0; i < solution.length(); i++) {
                 if (random.nextDouble() < (bitMutationRate)) {
                     int bits = random.nextInt(maxFlippedBits) + 1;
@@ -108,85 +131,67 @@ public class Population {
         }
     }
 
-    public int simpleFitness(BitSet solution) {    
-        if(isFeasible(solution)) {
+    public int simpleCardinalityFitness(BitSet solution) {
+        if (isFeasible(getSolutionAsString(solution))) {
             return solution.cardinality();
         } else {
             //Maybe make the infeasibility penalty increase with generation?
-            return solution.cardinality()/2; 
+            return solution.cardinality() / 2;
         }
     }
-    
-    //TODO: Optimize
-    public boolean isFeasible(BitSet solution) {
+            
+    public String getSolutionAsString(BitSet solution) {
         String sequence = "";
         for (int i = 0; i < solution.length(); i++) {
-            if(solution.get(i)) {
-                sequence += shortString.charAt(i) + "";
+            if (solution.get(i)) {
+                sequence += getShortString().charAt(i) + "";
             }
         }
-        
-        int seqIt = 0;
-        int longStringIt = 0;
-        
-        while(seqIt < sequence.length() 
-                && longStringIt < longString.length()) {
-            char currentChar = sequence.charAt(seqIt);
+        return sequence;
+    }
+
+    //TODO: Optimize
+    public boolean isFeasible(String solutionSequence) {
+
+        int solSeqIter = 0;
+        int longStringIterator = 0;
+
+        while (solSeqIter < solutionSequence.length()
+                && longStringIterator < getLongString().length()) {
+            char currentChar = solutionSequence.charAt(solSeqIter);
             boolean foundMatch = false;
-            while(longStringIt < longString.length()
+            while (longStringIterator < getLongString().length()
                     && !foundMatch) {
-                if(currentChar == longString.charAt(longStringIt)) {
+                if (currentChar == getLongString().charAt(longStringIterator)) {
                     foundMatch = true;
                 }
-                longStringIt++;
+                longStringIterator++;
             }
-            if(foundMatch) seqIt++;
+            if (foundMatch) {
+                solSeqIter++;
+            }
         }
         //If the sequence iterator reaches the end, all characters in the 
         //sequence were successfully matched
-        if (seqIt < sequence.length()) {
+        if (solSeqIter < solutionSequence.length()) {
             return true;
         } else {
             return false;
         }
     }
-    
-    
+
     //Runs one generation
     public void run() {
-        
         //Kill some infeasibles
-        
-        
         //Clone high-quality feasibles to replace genocided infeasibles
-        
-        
         //Crossover
-        
-        
         //Mutate
-
-        
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
     //GraphViz?
     //TODO: find some data visualization options
     public void display() {
 
     }
 
-    
-    
-    
 }
