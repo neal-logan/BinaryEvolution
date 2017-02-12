@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package binaryEvol;
 
 /**
@@ -17,14 +12,14 @@ public class Main {
 //        String a = "thequickbrownfoxjumpedoverthelazydog";
 //        String b = "thequickgreyowlflewoverthelazyfoxandanotherdog";
         
-        String a = "The email address used by Blackboaasdfasdfrd asdcfommguhfdddnghdfihfcation is your official UA sdfasissued email address";
-        String b = "address useasdfdffd by Blaca fordfgsdfg commwerwgsdfication is yourdddddd official UA issued"
-                + "(UAUsername@alaska.edu) sdfgcannoasdftewrt be chnged to a prddddddddeferred emaisdfjghkertl addresasdfs whin";
+        String a = "The email vcbmndfgssdasdgaghaddress used by Bgasdfaeertyejhcvlackboaasdfasdfrd asdcfommguhfdddnghdfihfcation is your official UA sdfasissued email address";
+        String b = "address usasdfeasdfdffd byasdf Blacasgdahaa fordfgsdfsdfgsg commwerwgsdfication iasdfs yourgsdfhdddddd official UA issued"
+                + "(UAUsername@alaska.edu) sdfgcannoasdftewrt be chnged to a bcfprddddddddeferred emaisdfjghkertl addresasdfs whin";
         
         
-        Population pop = new Population(a, b, 1000, 200);
+        Population pop = new Population(a, b, 100, 200);
         int i = 0;
-        while(i < 100) {
+        while(i < 10000) {
             pop.runOneGeneration();
             pop.textDisplay();
             i++;

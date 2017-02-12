@@ -209,7 +209,6 @@ public class Population {
                 bestSolutionIndex = i;
             }
         }
-        System.out.print(fitness[bestSolutionIndex]);
         return bestSolutionIndex;
     }
 
@@ -255,15 +254,15 @@ public class Population {
 
         //Kill/Clone - only way good genes are encouraged
         int numberOfTournaments = population.length / 10;
-        int tournamentSize = 7;
+        int tournamentSize = 10;
         for (int i = 0; i < numberOfTournaments; i++) {
             this.tournamentReplaceWorstWithCloneOfBest(tournamentSize, new SimpleFuzzyFitness());
         }
 
-        //Crossover - mixes things up
+        //Crossover - mixes things up, or isolates good solutions from bad
         this.shuffle(); //Necessary to ensure random partners
-        double crossoverRate = 0.1;
-        int crossoverPoints = 8;
+        double crossoverRate = 0.10;
+        int crossoverPoints = 4;
         for (int i = 0; i < population.length - 1; i += 2) {
             if (random.nextDouble() < crossoverRate) {
                 this.nPointCrossover(population[i], population[i + 1], crossoverPoints);
@@ -271,7 +270,7 @@ public class Population {
         }
 
         //Mutate - only way new genes are introduced
-        this.applyVariableLengthMutation(0.05, 80);
+        this.applyVariableLengthMutation(0.01, 7);
 
         //Iterate
         generation++;

@@ -151,7 +151,11 @@ public class BinarySolution {
         if (assessmentValid) {
             return;
         }
-
+        
+        this.solutionSkips = 0;
+        this.longStringSkips = 0;
+        this.matches = 0;
+        
         String solution = this.getSolutionAsString();
 
         String longString = population.getLongString();
@@ -208,7 +212,7 @@ public class BinarySolution {
                     //If match not found after search:
                     if (!match) {
                         //Iterate; skip more of the sequence which has been skipped less relative to overall lengths
-                        double skipRatio = getSolutionSkips() / (double) getLongStringSkips();
+                        double skipRatio = solutionSkips / (double) longStringSkips;
                         if (skipRatio > sequenceLengthRatio) {
                             longStringIterator += searchRange - 1;
                             longStringSkips += searchRange - 1;
