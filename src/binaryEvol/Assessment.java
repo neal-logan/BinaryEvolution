@@ -26,6 +26,7 @@ public class Assessment {
      */
     //TODO: Add option to skip feasibility check?
     public Assessment(Population population, int solutionIndex) {
+        this.longString = population.getLongString();
         this.population = population;
         this.searchRange = population.getSearchRange();
         this.solution = population.getSolutionAsString(solutionIndex);
@@ -59,7 +60,9 @@ public class Assessment {
                     for (int currentRange = 1; currentRange <= searchRange && !match; currentRange++) {
                         //Search diagonally at current range, unless a match has been found
                         for (int solutionSearch = 0, longStringSearch = currentRange;
-                                longStringSearch >= 0 && !match;
+                                longStringSearch >= 0 && !match
+                                && solutionIterator + solutionSearch < solution.length()
+                                && longStringIterator + longStringSearch < longString.length();
                                 solutionSearch++, longStringSearch--) {
                             //If a match is found, iterate, add to matches, and break
                             if (solution.charAt(solutionIterator + solutionSearch)

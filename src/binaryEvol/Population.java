@@ -1,15 +1,15 @@
 package binaryEvol;
 
-import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Random;
 
 public class Population {
 
     private BitSet[] population; //solutions
+    private double[] fitness;
     private String shortString = "";
     private String longString = "";
-    private int fuzzyMatchingSearchRange = 10;
+    private int fuzzyMatchingSearchRange = 7;
     private int generation = 0;
     private int epochLength = 0;
     Random random = new Random(System.currentTimeMillis());
@@ -24,36 +24,41 @@ public class Population {
             shortString = a;
         }
         this.population = new BitSet[size];
+        this.fitness = new double[population.length];
         this.epochLength = epochLength;
 
         for (int i = 0; i < size; i++) {
             population[i] = this.randomBitSet(shortString.length());
+            
         }
-        System.out.print("Initialized population");
+        this.runAssessments();
+        
+//        System.out.print("Initialized population");
     }
 
     //Generates a new BitSet with uniform-randomized bits
     public BitSet randomBitSet(int length) {
+        
         BitSet bitSet = new BitSet(length);
         for (int i = 0; i < length; i++) {
             bitSet.set(i, random.nextBoolean());
         }
+        String bitString = bitSetToString(bitSet);
+        System.out.println(bitString);
+//        System.out.println("Length: " + bitString.length());
         return bitSet;
     }
 
 //////////////////////////////   ACCESSORS   ///////////////////////////////////           
-    public String getSolutionAsString(BitSet solution) {
+    public String getSolutionAsString(int solutionIndex) {
+        
         String sequence = "";
-        for (int i = 0; i < solution.length(); i++) {
-            if (solution.get(i)) {
-                sequence += getShortString().charAt(i) + "";
+        for (int i = 0; i < population[solutionIndex].length(); i++) {
+            if (population[solutionIndex].get(i)) {
+                sequence += shortString.charAt(i) + "";
             }
         }
         return sequence;
-    }
-
-    public String getSolutionAsString(int solutionIndex) {
-        return getSolutionAsString(this.population[solutionIndex]);
     }
 
     public int getSearchRange() {
@@ -129,10 +134,6 @@ public class Population {
         }
     }
 
-    public void applyUniformMutation(double portionOfPopulationToMutate, int numberOfMutationsPerSolution) {
-
-    }
-
 
     /*
         Mutates between 1 and maxFlippedBits in sequence
@@ -145,7 +146,7 @@ public class Population {
             for (int i = 0; i < solution.length(); i++) {
                 if (random.nextDouble() < (bitMutationRate)) {
                     int bits = random.nextInt(maxFlippedBits) + 1;
-                    solution.flip(i, i + bits);
+                    solution.flip(i, Math.min(i + bits, solution.length()));
                 }
             }
         }
@@ -154,7 +155,7 @@ public class Population {
 //////////////////////////   CROSSOVER METHODS   ///////////////////////////////
     //Best to use an even number of points to avoid endpoint bias
     //Crosses over in place
-    private void singleNPointCrossover(BitSet a, BitSet b, int numberOfPoints) {
+    private void nPointCrossover(BitSet a, BitSet b, int numberOfPoints) {
         HashSet<Integer> crossoverPoints = new HashSet<>();
         while (crossoverPoints.size() < numberOfPoints) {
             crossoverPoints.add(random.nextInt(a.length()));
@@ -180,7 +181,7 @@ public class Population {
     }
 
     //Randomly swaps bits between a and b
-    private void singleUniformCrossover(BitSet a, BitSet b) {
+    private void uniformCrossover(BitSet a, BitSet b) {
         for (int i = 0; i < a.length(); i++) {
             if (random.nextBoolean()) {
                 boolean temp = a.get(i);
@@ -192,7 +193,7 @@ public class Population {
 
     //Keeps a certain portion of genetic material, i.e., 70-30 splits
     //Faster to use bias between 0 and 0.5, but will work
-    private void singleConstantBiasUniformCrossover(BitSet a, BitSet b, double bias) {
+    private void constantBiasUniformCrossover(BitSet a, BitSet b, double bias) {
         for (int i = 0; i < a.length(); i++) {
             if (random.nextDouble() < bias) {
                 boolean temp = a.get(i);
@@ -200,6 +201,34 @@ public class Population {
                 b.set(i, temp);
             }
         }
+    }
+
+//////////////////////////////   CLONING   /////////////////////////////////////
+    //Takes a random set of solutions
+    //Kills worst and replaces it with a clone of the best
+    private void tournamentReplaceWorstWithCloneOfBest(int poolSize) {
+        //Select combatants
+        HashSet<Integer> pool = new HashSet<>();
+        while (pool.size() < poolSize) {
+            pool.add(random.nextInt(population.length));
+        }
+        //Identify worst and best
+        int worstSolution = -1;
+        double lowestFitness = Double.POSITIVE_INFINITY;
+        int bestSolution = -1;
+        double highestFitness = Double.NEGATIVE_INFINITY;
+        for (int combatant : pool) {
+            if (fitness[combatant] < lowestFitness) {
+                lowestFitness = fitness[combatant];
+                worstSolution = combatant;
+            }
+            if (fitness[combatant] > highestFitness) {
+                highestFitness = fitness[combatant];
+                bestSolution = combatant;
+            }
+        }
+        //Replace worst with clone of best
+        population[worstSolution] = (BitSet)population[bestSolution].deepClone();
     }
 
 //////////////////////////////   OPERATION    //////////////////////////////////
@@ -214,48 +243,94 @@ public class Population {
         }
     }
 
-    //Runs one generation
-    public void runOneGeneration() {
-        //Shuffle
-        this.shuffle();
-
-        //Calculate fitness information
-        double[] fitness = new double[population.length];
+    public void runAssessments() {
         for (int i = 0; i < fitness.length; i++) {
             Assessment assessment = new Assessment(this, i);
-            fitness[i] = assessment.getEscalatingPowerFuzzyFitness(0.5);
+            fitness[i] = assessment.getSimpleFuzzyFitness();
         }
 
+    }
+    
+    public int bestSolutionIndex() {
+        double highestFitness = Double.NEGATIVE_INFINITY;
+        int bestSolution = -1;
+        for(int i = 0; i < population.length; i++) {
+            if(fitness[i] > highestFitness) {
+                highestFitness = fitness[i];
+                bestSolution = i;
+            }
+        }
+        return bestSolution;
+    }
+    
+    public double getTotalFitness() {
         double totalFitness = 0;
         for (int i = 0; i < fitness.length; i++) {
             totalFitness += fitness[i];
         }
+        return totalFitness;
+    }
+    
+    public double getMeanFitness() {
+        return this.getTotalFitness()/population.length;
+    }
 
-        //Kill/Clone
+    //Runs one generation
+    public void runOneGeneration() {
         
+        //Kill/Clone - only way good genes are encouraged
+        int numberOfTournaments = population.length / 20;
+        int tournamentSize = 7;
+        for(int i = 0; i < numberOfTournaments; i++) {
+            this.tournamentReplaceWorstWithCloneOfBest(tournamentSize);
+        }
         
+        //Crossover - mixes things up
+        this.shuffle(); //Necessary to ensure random partners
+        double crossoverRate = 0.3;
+        int crossoverPoints = 2;
+        for (int i = 0; i < population.length - 1; i += 2) {
+            if(random.nextDouble() < crossoverRate) {
+                this.nPointCrossover(population[i], population[i + 1], crossoverPoints);
+            }
+        }
+
+        //Mutate - only way new genes are introduced
+        this.applyVariableLengthMutation(0.01, 3);
+
+        //Update Assessments
+        this.runAssessments();
         
-        
-        //Crossover
-        
-        
-        
-        
-        //Mutate
+        //Iterate
         generation++;
     }
 
 //////////////////////////////   DISPLAY   ////////////////////////////////////
-    
     //GraphViz?
     //TODO: find some data visualization options
     public void display() {
 
     }
 
-    
     public void textDisplay() {
+        String best = this.getSolutionAsString(this.bestSolutionIndex());
+        System.out.println("Generation: " + this.generation
+        + "\t MeanFitness: " + this.getMeanFitness() + "\t Highest fitness: " + best.length() + " Feasible? " + this.isFeasible(best));
+        System.out.println("Best solution: " + best);
         
+        
+    }
+
+    public static String bitSetToString(BitSet bitSet) {
+        String s = "";
+        for(int i = 0; i < bitSet.length(); i++) {
+            if(bitSet.get(i)) {
+                s += "1";
+            } else {
+                s += "0";
+            }
+        }
+        return s;
     }
     
 }
