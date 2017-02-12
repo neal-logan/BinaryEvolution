@@ -17,14 +17,14 @@ public class Main {
 //        String a = "thequickbrownfoxjumpedoverthelazydog";
 //        String b = "thequickgreyowlflewoverthelazyfoxandanotherdog";
         
-        String a = "The email address used by Blackboaasdfrd communication is your official UA sdfasissued email address";
-        String b = "address useasdfdffd by Blaca fordfgsdfg commwerwgsdfication is your official UA issued"
-                + "(UAUsername@alaska.edu) sdfgcannoasdftewrt be chnged to a preferred emaisdfjghkertl addresasdfs whin";
+        String a = "The email address used by Blackboaasdfasdfrd asdcfommguhfdddnghdfihfcation is your official UA sdfasissued email address";
+        String b = "address useasdfdffd by Blaca fordfgsdfg commwerwgsdfication is yourdddddd official UA issued"
+                + "(UAUsername@alaska.edu) sdfgcannoasdftewrt be chnged to a prddddddddeferred emaisdfjghkertl addresasdfs whin";
         
         
-        Population pop = new Population(a, b, 100, 200);
+        Population pop = new Population(a, b, 1000, 200);
         int i = 0;
-        while(i < 1000) {
+        while(i < 100) {
             pop.runOneGeneration();
             pop.textDisplay();
             i++;

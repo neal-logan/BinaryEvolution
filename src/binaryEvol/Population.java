@@ -5,13 +5,13 @@ import java.util.Random;
 
 public class Population {
 
-    private BitSet[] population; //solutions
-    private double[] fitness;
+    private BinarySolution[] population; //solutions
     private String shortString = "";
     private String longString = "";
     private int fuzzyMatchingSearchRange = 7;
     private int generation = 0;
     private int epochLength = 0;
+    private FitnessFunction test = new SimpleFuzzyFitness();
     Random random = new Random(System.currentTimeMillis());
 
 ///////////////////////////   INITIALIZATION   ///////////////////////////////
@@ -23,23 +23,21 @@ public class Population {
             longString = b;
             shortString = a;
         }
-        this.population = new BitSet[size];
-        this.fitness = new double[population.length];
+        this.population = new BinarySolution[size];
         this.epochLength = epochLength;
 
         for (int i = 0; i < size; i++) {
             population[i] = this.randomBitSet(shortString.length());
-            
+
         }
-        this.runAssessments();
-        
+
 //        System.out.print("Initialized population");
     }
 
     //Generates a new BitSet with uniform-randomized bits
-    public BitSet randomBitSet(int length) {
-        
-        BitSet bitSet = new BitSet(length);
+    public BinarySolution randomBitSet(int length) {
+
+        BinarySolution bitSet = new BinarySolution(length, this);
         for (int i = 0; i < length; i++) {
             bitSet.set(i, random.nextBoolean());
         }
@@ -50,22 +48,11 @@ public class Population {
     }
 
 //////////////////////////////   ACCESSORS   ///////////////////////////////////           
-    public String getSolutionAsString(int solutionIndex) {
-        
-        String sequence = "";
-        for (int i = 0; i < population[solutionIndex].length(); i++) {
-            if (population[solutionIndex].get(i)) {
-                sequence += shortString.charAt(i) + "";
-            }
-        }
-        return sequence;
-    }
-
     public int getSearchRange() {
         return this.fuzzyMatchingSearchRange;
     }
 
-    public BitSet[] getPopulation() {
+    public BinarySolution[] getPopulation() {
         return population;
     }
 
@@ -86,46 +73,12 @@ public class Population {
     }
 
 ////////////////////////////////  FITNESS   ////////////////////////////////////    
-    /*
-        Returns true iff the specified solution sequence is a valid subsequence
-        in the longString.
-     */
-    //TODO: Optimize
-    public boolean isFeasible(String solutionSequence) {
-
-        int solSeqIter = 0;
-        int longStringIterator = 0;
-
-        while (solSeqIter < solutionSequence.length()
-                && longStringIterator < getLongString().length()) {
-            char currentChar = solutionSequence.charAt(solSeqIter);
-            boolean foundMatch = false;
-            while (longStringIterator < getLongString().length()
-                    && !foundMatch) {
-                if (currentChar == getLongString().charAt(longStringIterator)) {
-                    foundMatch = true;
-                }
-                longStringIterator++;
-            }
-            if (foundMatch) {
-                solSeqIter++;
-            }
-        }
-        //If the sequence iterator reaches the end, all characters in the 
-        //sequence were successfully matched
-        if (solSeqIter < solutionSequence.length()) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
 ////////////////////////////    MUTATION    ///////////////////////////////////
     /*
     bitMutationRate: Chance each bit has to mutate, on [0,1]
      */
     public void applyBitwiseRandomMutation(double bitMutationRate) {
-        for (BitSet solution : getPopulation()) {
+        for (BinarySolution solution : getPopulation()) {
             for (int i = 0; i < solution.length(); i++) {
                 if (random.nextDouble() < bitMutationRate) {
                     solution.flip(i);
@@ -142,7 +95,7 @@ public class Population {
      */
     public void applyVariableLengthMutation(double bitMutationRate, int maxFlippedBits) {
         bitMutationRate /= ((1 + maxFlippedBits) / 2.0); //Correcting for higher rate of flipped bits
-        for (BitSet solution : getPopulation()) {
+        for (BinarySolution solution : getPopulation()) {
             for (int i = 0; i < solution.length(); i++) {
                 if (random.nextDouble() < (bitMutationRate)) {
                     int bits = random.nextInt(maxFlippedBits) + 1;
@@ -155,7 +108,7 @@ public class Population {
 //////////////////////////   CROSSOVER METHODS   ///////////////////////////////
     //Best to use an even number of points to avoid endpoint bias
     //Crosses over in place
-    private void nPointCrossover(BitSet a, BitSet b, int numberOfPoints) {
+    private void nPointCrossover(BinarySolution a, BinarySolution b, int numberOfPoints) {
         HashSet<Integer> crossoverPoints = new HashSet<>();
         while (crossoverPoints.size() < numberOfPoints) {
             crossoverPoints.add(random.nextInt(a.length()));
@@ -181,7 +134,7 @@ public class Population {
     }
 
     //Randomly swaps bits between a and b
-    private void uniformCrossover(BitSet a, BitSet b) {
+    private void uniformCrossover(BinarySolution a, BinarySolution b) {
         for (int i = 0; i < a.length(); i++) {
             if (random.nextBoolean()) {
                 boolean temp = a.get(i);
@@ -193,7 +146,7 @@ public class Population {
 
     //Keeps a certain portion of genetic material, i.e., 70-30 splits
     //Faster to use bias between 0 and 0.5, but will work
-    private void constantBiasUniformCrossover(BitSet a, BitSet b, double bias) {
+    private void constantBiasUniformCrossover(BinarySolution a, BinarySolution b, double bias) {
         for (int i = 0; i < a.length(); i++) {
             if (random.nextDouble() < bias) {
                 boolean temp = a.get(i);
@@ -206,7 +159,9 @@ public class Population {
 //////////////////////////////   CLONING   /////////////////////////////////////
     //Takes a random set of solutions
     //Kills worst and replaces it with a clone of the best
-    private void tournamentReplaceWorstWithCloneOfBest(int poolSize) {
+    private void tournamentReplaceWorstWithCloneOfBest(int poolSize, FitnessFunction test) {
+        double[] fitness = this.getFitness(test);
+
         //Select combatants
         HashSet<Integer> pool = new HashSet<>();
         while (pool.size() < poolSize) {
@@ -228,7 +183,7 @@ public class Population {
             }
         }
         //Replace worst with clone of best
-        population[worstSolution] = (BitSet)population[bestSolution].deepClone();
+        population[worstSolution] = (BinarySolution) population[bestSolution].deepClone();
     }
 
 //////////////////////////////   OPERATION    //////////////////////////////////
@@ -237,70 +192,87 @@ public class Population {
         int rand;
         for (int i = 0; i < getPopulation().length; i++) {
             rand = random.nextInt(getPopulation().length);
-            BitSet temp = getPopulation()[i];
+            BinarySolution temp = getPopulation()[i];
             population[i] = getPopulation()[rand];
             population[rand] = temp;
         }
     }
 
-    public void runAssessments() {
-        for (int i = 0; i < fitness.length; i++) {
-            Assessment assessment = new Assessment(this, i);
-            fitness[i] = assessment.getSimpleFuzzyFitness();
-        }
-
-    }
-    
-    public int bestSolutionIndex() {
+    public int bestSolutionIndex(FitnessFunction fitnessFunction) {
         double highestFitness = Double.NEGATIVE_INFINITY;
-        int bestSolution = -1;
-        for(int i = 0; i < population.length; i++) {
-            if(fitness[i] > highestFitness) {
-                highestFitness = fitness[i];
-                bestSolution = i;
+        int bestSolutionIndex = -1;
+        double[] fitness = this.getFitness(fitnessFunction);
+        for (int i = 0; i < population.length; i++) {
+            double currentFitness = fitnessFunction.getFitness(population[i]);
+            if (currentFitness > highestFitness) {
+                highestFitness = currentFitness;
+                bestSolutionIndex = i;
             }
         }
-        return bestSolution;
+        System.out.print(fitness[bestSolutionIndex]);
+        return bestSolutionIndex;
     }
-    
-    public double getTotalFitness() {
-        double totalFitness = 0;
-        for (int i = 0; i < fitness.length; i++) {
-            totalFitness += fitness[i];
+
+    //Uses the default fitness function
+    public int bestSolutionIndex() {
+        return bestSolutionIndex(this.test);
+    }
+
+    public static double sum(double[] values) {
+        double sum = 0;
+        for (int i = 0; i < values.length; i++) {
+            sum += values[i];
         }
-        return totalFitness;
+        return sum;
     }
-    
+
+    public double[] getFitness(FitnessFunction fitnessFunction) {
+        double[] fitness = new double[this.population.length];
+        for (int i = 0; i < this.population.length; i++) {
+            fitness[i] = fitnessFunction.getFitness(population[i]);
+        }
+        return fitness;
+    }
+
+    public double[] getFitness() {
+        double[] fitness = new double[this.population.length];
+        for (int i = 0; i < this.population.length; i++) {
+            fitness[i] = test.getFitness(population[i]);
+        }
+        return fitness;
+    }
+
+    public double getMeanFitness(FitnessFunction fitnessFunction) {
+        return sum(this.getFitness(fitnessFunction)) / population.length;
+    }
+
     public double getMeanFitness() {
-        return this.getTotalFitness()/population.length;
+        return sum(this.getFitness(test)) / population.length;
     }
 
     //Runs one generation
     public void runOneGeneration() {
-        
+
         //Kill/Clone - only way good genes are encouraged
-        int numberOfTournaments = population.length / 20;
+        int numberOfTournaments = population.length / 10;
         int tournamentSize = 7;
-        for(int i = 0; i < numberOfTournaments; i++) {
-            this.tournamentReplaceWorstWithCloneOfBest(tournamentSize);
+        for (int i = 0; i < numberOfTournaments; i++) {
+            this.tournamentReplaceWorstWithCloneOfBest(tournamentSize, new SimpleFuzzyFitness());
         }
-        
+
         //Crossover - mixes things up
         this.shuffle(); //Necessary to ensure random partners
-        double crossoverRate = 0.3;
-        int crossoverPoints = 2;
+        double crossoverRate = 0.1;
+        int crossoverPoints = 8;
         for (int i = 0; i < population.length - 1; i += 2) {
-            if(random.nextDouble() < crossoverRate) {
+            if (random.nextDouble() < crossoverRate) {
                 this.nPointCrossover(population[i], population[i + 1], crossoverPoints);
             }
         }
 
         //Mutate - only way new genes are introduced
-        this.applyVariableLengthMutation(0.01, 3);
+        this.applyVariableLengthMutation(0.05, 80);
 
-        //Update Assessments
-        this.runAssessments();
-        
         //Iterate
         generation++;
     }
@@ -313,18 +285,19 @@ public class Population {
     }
 
     public void textDisplay() {
-        String best = this.getSolutionAsString(this.bestSolutionIndex());
+
+        BinarySolution bestSolution = population[this.bestSolutionIndex()];
+        String best = bestSolution.getSolutionAsString();
         System.out.println("Generation: " + this.generation
-        + "\t MeanFitness: " + this.getMeanFitness() + "\t Highest fitness: " + best.length() + " Feasible? " + this.isFeasible(best));
+                + "\t MeanFitness: " + this.getMeanFitness(test) + "\t Highest fitness: " + test.getFitness(bestSolution) + " Feasible? " + bestSolution.isFeasible());
         System.out.println("Best solution: " + best);
-        
-        
+
     }
 
-    public static String bitSetToString(BitSet bitSet) {
+    public static String bitSetToString(BinarySolution bitSet) {
         String s = "";
-        for(int i = 0; i < bitSet.length(); i++) {
-            if(bitSet.get(i)) {
+        for (int i = 0; i < bitSet.length(); i++) {
+            if (bitSet.get(i)) {
                 s += "1";
             } else {
                 s += "0";
@@ -332,5 +305,5 @@ public class Population {
         }
         return s;
     }
-    
+
 }
