@@ -3,16 +3,26 @@ package binaryEvol;
 import java.util.HashSet;
 import java.util.Random;
 
+/**
+*
+*
+*   Contains the population to be evolved, representing the entire set of solutions
+*
+*/
+
+
 public class Population {
 
     private BinarySolution[] population; //solutions
     private String shortString = "";
     private String longString = "";
-    private int fuzzyMatchingSearchRange = 7;
+    private final int fuzzyMatchingSearchRange = 5;
     private int generation = 0;
     private int epochLength = 0;
     private FitnessFunction test = new SimpleFuzzyFitness();
     Random random = new Random(System.currentTimeMillis());
+    private BinarySolution bestSolution;
+    private double bestSolutionFitness = Double.MIN_VALUE;
 
 ///////////////////////////   INITIALIZATION   ///////////////////////////////
     public Population(String a, String b, int size, int epochLength) {
@@ -42,7 +52,7 @@ public class Population {
             bitSet.set(i, random.nextBoolean());
         }
         String bitString = bitSetToString(bitSet);
-        System.out.println(bitString);
+//        System.out.println(bitString);
 //        System.out.println("Length: " + bitString.length());
         return bitSet;
     }
@@ -250,19 +260,19 @@ public class Population {
     }
 
     //Runs one generation
-    public void runOneGeneration() {
+    public void runOneGeneration(int numberOfTournaments, int tournamentSize, 
+            double crossoverRate, int crossoverPoints, 
+            double mutationRate, int mutationMaxLength) {
 
         //Kill/Clone - only way good genes are encouraged
-        int numberOfTournaments = population.length / 10;
-        int tournamentSize = 10;
         for (int i = 0; i < numberOfTournaments; i++) {
             this.tournamentReplaceWorstWithCloneOfBest(tournamentSize, new SimpleFuzzyFitness());
         }
 
         //Crossover - mixes things up, or isolates good solutions from bad
         this.shuffle(); //Necessary to ensure random partners
-        double crossoverRate = 0.10;
-        int crossoverPoints = 4;
+        crossoverRate = 0.10;
+        crossoverPoints = 4;
         for (int i = 0; i < population.length - 1; i += 2) {
             if (random.nextDouble() < crossoverRate) {
                 this.nPointCrossover(population[i], population[i + 1], crossoverPoints);
@@ -272,6 +282,16 @@ public class Population {
         //Mutate - only way new genes are introduced
         this.applyVariableLengthMutation(0.01, 7);
 
+        
+        //Find & Update Best
+        double[] fitness = this.getFitness(this.test);
+        for(int i = 0; i < this.population.length; i++) {
+            if(fitness[i] > this.bestSolutionFitness) {
+                this.bestSolutionFitness = fitness[i];
+                this.bestSolution = population[i].deepClone();
+            }            
+        }
+        
         //Iterate
         generation++;
     }
@@ -284,15 +304,16 @@ public class Population {
     }
 
     public void textDisplay() {
-
-        BinarySolution bestSolution = population[this.bestSolutionIndex()];
-        String best = bestSolution.getSolutionAsString();
+        BinarySolution bestThisGen = population[this.bestSolutionIndex()];
+        String bestThisGeneration = bestThisGen.getSolutionAsString();
         System.out.println("Generation: " + this.generation
-                + "\t MeanFitness: " + this.getMeanFitness(test) + "\t Highest fitness: " + test.getFitness(bestSolution) + " Feasible? " + bestSolution.isFeasible());
-        System.out.println("Best solution: " + best);
-
+                + "\t MeanFitness: " + this.getMeanFitness(test) + "\t Highest fitness this gen: " + test.getFitness(bestThisGen) + " Feasible? " + bestThisGen.isFeasible());
+        System.out.println("Best solution this gen: " + bestThisGeneration);
+        System.out.println("Highest fitness so far: " + this.bestSolutionFitness + " Feasible? " + this.bestSolution.isFeasible());
+        System.out.println("Best solution so far: " + this.bestSolution.getSolutionAsString());
     }
 
+    //Returns a binary string representation of the bitset using Unicode 1s and 0s
     public static String bitSetToString(BinarySolution bitSet) {
         String s = "";
         for (int i = 0; i < bitSet.length(); i++) {

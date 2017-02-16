@@ -3,6 +3,8 @@ package binaryEvol;
 /**
  *
  * @author neal
+ * Represents a single solution to the LCS problem in binary format
+ * 
  */
 public class BinarySolution {
 
